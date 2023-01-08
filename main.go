@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Ullaakut/nmap"
 	"log"
+	"regexp"
 	"strconv"
 	"time"
 )
@@ -58,6 +59,8 @@ func main() {
 		Results: make([]TargetResult, 0),
 	}
 
+	regex := regexp.MustCompile("(OSV:CVE-[1-9][0-9][0-9][0-9]-[1-9]*)\t(\\d.\\d)")
+
 	// Parse nmap vulners results
 	for _, host := range result.Hosts {
 		if len(host.Ports) == 0 || len(host.Addresses) == 0 {
@@ -82,25 +85,16 @@ func main() {
 			}
 			for _, script := range port.Scripts {
 				if script.ID == "vulners" {
-					for _, t := range script.Tables {
-						for _, table := range t.Tables {
-							var vuln Vulnerability
-							for _, elem := range table.Elements {
-								switch elem.Key {
-								case "id":
-									vuln.Identifier = elem.Value
-								case "cvss":
-									cvss, err := strconv.ParseFloat(elem.Value, 32)
-									if err != nil {
-										log.Fatal(err)
-									}
-									vuln.CVSSScore = float32(cvss)
-								}
-							}
-							if vuln.Identifier != "" {
-								service.Vulns = append(service.Vulns, vuln)
-							}
+					vulnsIndexiesAndCVSSes := regex.FindAllStringSubmatch(script.Output, -1)
+					for _, vulnIndexAndCVSS := range vulnsIndexiesAndCVSSes {
+						cvss, err := strconv.ParseFloat(vulnIndexAndCVSS[2], 32)
+						if err != nil {
+							log.Fatal(err)
 						}
+						service.Vulns = append(service.Vulns, Vulnerability{
+							Identifier: vulnIndexAndCVSS[1],
+							CVSSScore:  float32(cvss),
+						})
 					}
 				}
 			}
@@ -114,5 +108,26 @@ func main() {
 	}
 
 	fmt.Println(checkVulnResponse)
-	fmt.Printf("Nmap done: %d hosts up scanned in %3f seconds\n", len(result.Hosts), result.Stats.Finished.Elapsed)
 }
+
+//
+//for _, t := range script.Tables {
+//	for _, table := range t.Tables {
+//		var vuln Vulnerability
+//		for _, elem := range table.Elements {
+//			switch elem.Key {
+//			case "id":
+//				vuln.Identifier = elem.Value
+//			case "cvss":
+//				cvss, err := strconv.ParseFloat(elem.Value, 32)
+//				if err != nil {
+//					log.Fatal(err)
+//				}
+//				vuln.CVSSScore = float32(cvss)
+//			}
+//		}
+//		if vuln.Identifier != "" {
+//			service.Vulns = append(service.Vulns, vuln)
+//		}
+//	}
+//}
