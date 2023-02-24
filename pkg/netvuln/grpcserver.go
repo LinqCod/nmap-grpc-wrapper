@@ -3,24 +3,20 @@ package netvuln
 import (
 	"context"
 	"github.com/Ullaakut/nmap"
-	"log"
+	api "github.com/linqcod/nmap-grpc-wrapper/pkg/api"
+	log "github.com/sirupsen/logrus"
 	"regexp"
 	"strconv"
 	"time"
 )
 
 type Server struct {
-	grpc.UnimplementedNetVulnServiceServer
+	api.UnimplementedNetVulnServiceServer
 }
 
-func (s *Server) CheckVuln(ctx context.Context, in *grpc.CheckVulnRequest) (*grpc.CheckVulnResponse, error) {
+func (s *Server) CheckVuln(ctx context.Context, in *api.CheckVulnRequest) (*api.CheckVulnResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-
-	ports := make([]string, 0)
-	for _, port := range in.TcpPorts {
-		ports = append(ports, strconv.Itoa(int(port)))
-	}
 
 	scannerOpts := []func(*nmap.Scanner){
 		nmap.WithContext(ctx),
@@ -42,32 +38,32 @@ func (s *Server) CheckVuln(ctx context.Context, in *grpc.CheckVulnRequest) (*grp
 
 	scanner, err := nmap.NewScanner(scannerOpts...)
 	if err != nil {
-		log.Fatalf("unable to create nmap scanner: %v", err)
+		log.Errorf("error while creating new nmap scanner: %v", err)
 	}
 
 	result, warnings, err := scanner.Run()
 	if err != nil {
-		log.Fatalf("unable to run nmap scan: %v", err)
+		log.Errorf("error while running nmap scanner: %v", err)
 	}
 
 	if warnings != nil {
-		log.Printf("Warnings: \n %v", warnings)
+		log.Printf("Nmap Scanner Warnings: \n %v", warnings)
 	}
 
-	checkVulnResponse := grpc.CheckVulnResponse{
-		Results: make([]*grpc.TargetResult, 0),
+	checkVulnResponse := api.CheckVulnResponse{
+		Results: make([]*api.TargetResult, 0),
 	}
 
-	regex := regexp.MustCompile("(OSV:CVE-[1-9][0-9][0-9][0-9]-[1-9]*)\t(\\d.\\d)")
+	regex := regexp.MustCompile("(CVE-[1-9][0-9][0-9][0-9]-[1-9]*)\t(\\d.\\d)")
 
 	for _, host := range result.Hosts {
 		if len(host.Ports) == 0 || len(host.Addresses) == 0 {
 			continue
 		}
 
-		targetResult := grpc.TargetResult{
+		targetResult := api.TargetResult{
 			Target:   host.Addresses[0].Addr,
-			Services: make([]*grpc.Service, 0),
+			Services: make([]*api.Service, 0),
 		}
 
 		for _, port := range host.Ports {
@@ -75,11 +71,11 @@ func (s *Server) CheckVuln(ctx context.Context, in *grpc.CheckVulnRequest) (*grp
 				continue
 			}
 
-			service := grpc.Service{
+			service := api.Service{
 				Name:    port.Service.Name,
 				Version: port.Service.Version,
 				TcpPort: int32(port.ID),
-				Vulns:   make([]*grpc.Vulnerability, 0),
+				Vulns:   make([]*api.Vulnerability, 0),
 			}
 
 			for _, script := range port.Scripts {
@@ -88,9 +84,9 @@ func (s *Server) CheckVuln(ctx context.Context, in *grpc.CheckVulnRequest) (*grp
 					for _, vulnIndexAndCVSS := range vulnsIndexiesAndCVSSes {
 						cvss, err := strconv.ParseFloat(vulnIndexAndCVSS[2], 32)
 						if err != nil {
-							log.Fatal(err)
+							log.Errorf("error while parsing float value from string: %v", err)
 						}
-						service.Vulns = append(service.Vulns, &grpc.Vulnerability{
+						service.Vulns = append(service.Vulns, &api.Vulnerability{
 							Identifier: vulnIndexAndCVSS[1],
 							CvssScore:  float32(cvss),
 						})
