@@ -1,5 +1,5 @@
 build:
-	cd cmd/server | go build -o ./main . | ./main
+	go build -o ./cmd/server/main ./cmd/server && ./cmd/server/main
 
 lint:
 	golangci-lint run
@@ -7,4 +7,4 @@ lint:
 test:
 	go test ./...
 
-.PHONY: lint, build
+.PHONY: lint, test, build
