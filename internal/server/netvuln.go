@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Ullaakut/nmap"
 	"github.com/linqcod/nmap-grpc-wrapper/pb"
+	log "github.com/sirupsen/logrus"
 	"regexp"
 	"strconv"
 	"time"
@@ -47,7 +48,7 @@ func (s *Server) CheckVuln(ctx context.Context, in *pb.CheckVulnRequest) (*pb.Ch
 	}
 
 	if warnings != nil {
-		return nil, fmt.Errorf("Nmap Scanner Warnings: \n %v", warnings)
+		log.Warnf("nmap warnings: %v", warnings)
 	}
 
 	vulnCheckResponse := pb.CheckVulnResponse{
