@@ -56,7 +56,7 @@ func TestCheckVuln(t *testing.T) {
 
 	conn, err := grpc.DialContext(
 		context.Background(),
-		"",
+		":9000",
 		grpc.WithContextDialer(dialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
