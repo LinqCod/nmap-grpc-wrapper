@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 	"net"
+	"strings"
 	"testing"
 )
 
@@ -24,7 +25,7 @@ var tests = map[string]struct {
 		targets:  []string{"localhost"},
 		tcpPorts: []int32{},
 		expected: expectation{
-			out: "results:{target:\"127.0.0.1\"  services:{name:\"ipp\"  version:\"2.4\"  tcp_port:631  vulns:{identifier:\"CVE-2022-26691\"  cvss_score:7.2}  vulns:{identifier:\"CVE-2022-26691\"}}}",
+			out: "results:{target:\"127.0.0.1\"services:{name:\"ipp\"version:\"2.4\"tcp_port:631vulns:{identifier:\"CVE-2022-26691\"cvss_score:7.2}vulns:{identifier:\"CVE-2022-26691\"}}}",
 		},
 	},
 }
@@ -78,7 +79,7 @@ func TestCheckVuln(t *testing.T) {
 				t.Fatalf("error while checking vuln: %v", err)
 			}
 
-			if res.String() != tt.expected.out {
+			if strings.ReplaceAll(res.String(), " ", "") != tt.expected.out {
 				t.Fatalf("Unexpected value. Want: %s,\nGot: %s", tt.expected.out, res)
 			}
 		})
