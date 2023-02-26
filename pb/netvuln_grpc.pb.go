@@ -4,7 +4,7 @@
 // - protoc             v3.12.4
 // source: netvuln.proto
 
-package proto
+package pb
 
 import (
 	context "context"
