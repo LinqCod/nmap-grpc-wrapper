@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/linqcod/nmap-grpc-wrapper/config"
 	"github.com/linqcod/nmap-grpc-wrapper/internal/server"
-	"github.com/linqcod/nmap-grpc-wrapper/internal/service"
 	"github.com/linqcod/nmap-grpc-wrapper/pb"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -40,11 +39,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-
-	checkVulnService := service.New()
-	checkVulnServer := server.New(checkVulnService)
-
-	pb.RegisterNetVulnServiceServer(s, checkVulnServer)
+	pb.RegisterNetVulnServiceServer(s, &server.Server{})
 
 	log.Printf("server is listening to %s:%s", cfg.Server.Host, cfg.Server.Port)
 	if err := s.Serve(listener); err != nil {
